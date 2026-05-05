@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>AnestLab · Mapa da Anestesia SP</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --green:#00A862;--green-dk:#007A49;--green-lt:#E6F5EE;
+  --text:#111111;--muted:#666666;--hint:#AAAAAA;
+  --border:#E0E0E0;--surface:#F5F5F5;--white:#FFFFFF;
+}
+html,body{background:#FFFFFF!important;color:#111111!important;-webkit-text-size-adjust:100%;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;min-height:100vh;}
+
+.header{height:52px;background:#fff;border-bottom:1px solid #E0E0E0;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:500;}
+.logo{font-size:19px;font-weight:800;color:#111;letter-spacing:-.02em;}
+.logo b{color:#00A862;font-weight:800;}
+.live{display:flex;align-items:center;gap:5px;font-size:12px;color:#666;}
+.ldot{width:7px;height:7px;border-radius:50%;background:#00A862;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+.hero{background:#fff;padding:28px 18px 24px;border-bottom:1px solid #E0E0E0;}
+.hero-eye{font-size:11px;font-weight:600;color:#00A862;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;display:block;}
+.hero h1{font-size:28px;font-weight:800;color:#111;line-height:1.15;margin-bottom:10px;}
+.hero h1 i{color:#00A862;font-style:normal;}
+.hero p{font-size:14px;color:#666;line-height:1.6;margin-bottom:22px;}
+.hero-stats{display:flex;gap:24px;}
+.hs-n{font-size:26px;font-weight:800;color:#111;line-height:1;}
+.hs-l{font-size:11px;color:#666;margin-top:3px;}
+
+.notice{background:#E6F5EE;border-bottom:1px solid #B2DFCC;padding:11px 18px;display:flex;align-items:center;gap:10px;}
+.notice p{font-size:13px;color:#005C35;flex:1;line-height:1.4;}
+.notice strong{color:#003D22;}
+.notice-n{font-size:24px;font-weight:800;color:#00A862;}
+
+.controls{background:#fff;padding:10px 18px;border-bottom:1px solid #E0E0E0;position:sticky;top:52px;z-index:400;}
+.srch{width:100%;border:1.5px solid #E0E0E0;border-radius:10px;padding:9px 14px;font-size:14px;color:#111;background:#F5F5F5;outline:none;-webkit-appearance:none;font-family:inherit;margin-bottom:8px;}
+.srch:focus{border-color:#00A862;background:#fff;}
+.srch::placeholder{color:#AAA;}
+.filters{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.filters::-webkit-scrollbar{display:none;}
+.ftag{font-size:12px;font-weight:500;padding:5px 13px;border-radius:20px;border:1.5px solid #E0E0E0;background:#fff;color:#666;cursor:pointer;white-space:nowrap;font-family:inherit;-webkit-appearance:none;}
+.ftag.on{background:#111;color:#fff;border-color:#111;}
+
+.map-wrap{background:#EEF2F5;border-bottom:1px solid #E0E0E0;position:relative;}
+#msvg{width:100%;height:370px;display:block;touch-action:manipulation;}
+.map-tip{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);color:#fff;font-size:11px;padding:4px 12px;border-radius:20px;pointer-events:none;white-space:nowrap;}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 18px;background:#fff;border-bottom:1px solid #E0E0E0;}
+.leg-i{display:flex;align-items:center;gap:5px;font-size:11px;color:#666;}
+.leg-d{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+.bbar{padding:10px 18px;background:#fff;border-top:1px solid #E0E0E0;display:flex;gap:8px;position:sticky;bottom:0;z-index:400;}
+.bpri{flex:2;background:#00A862;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;-webkit-appearance:none;}
+.bpri:active{background:#007A49;}
+.bsec{flex:1;background:#fff;color:#111;border:1.5px solid #E0E0E0;border-radius:10px;padding:13px;font-size:14px;font-weight:500;font-family:inherit;cursor:pointer;-webkit-appearance:none;}
+.bsec:active{background:#F5F5F5;}
+
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;align-items:flex-end;justify-content:center;}
+.ov.on{display:flex;}
+.sheet{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.ov.on .sheet{animation:up .22s ease;}
+.sh-handle{width:38px;height:4px;background:#E0E0E0;border-radius:4px;margin:12px auto 0;}
+.sh-body{padding:18px;}
+.sh-tag{font-size:11px;font-weight:600;color:#00A862;letter-spacing:.06em;text-transform:uppercase;margin-bottom:5px;}
+.sh-name{font-size:20px;font-weight:800;color:#111;line-height:1.2;margin-bottom:4px;}
+.sh-meta{font-size:13px;color:#666;margin-bottom:16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.rpill{font-size:11px;padding:2px 9px;border-radius:12px;font-weight:500;}
+
+.sal-box{background:#F5F5F5;border-radius:12px;padding:14px;margin-bottom:12px;}
+.sal-lbl{font-size:12px;color:#666;margin-bottom:4px;}
+.sal-val{font-size:34px;font-weight:800;color:#111;line-height:1;}
+.sal-val.lk{filter:blur(9px);user-select:none;color:#CCC;}
+.sal-sub{font-size:12px;color:#666;margin-top:4px;}
+.sal-cta{font-size:13px;color:#00A862;font-weight:500;margin-top:7px;}
+
+.grp-box{border:1.5px solid #E0E0E0;border-radius:10px;padding:11px 13px;margin-bottom:12px;}
+.grp-lbl{font-size:11px;color:#666;margin-bottom:2px;}
+.grp-val{font-size:14px;font-weight:500;color:#111;}
+.grp-empty{font-size:13px;color:#AAA;font-style:italic;}
+
+.rel-hdr{font-size:13px;font-weight:600;color:#111;margin-bottom:8px;}
+.rel-card{border:1.5px solid #E0E0E0;border-radius:10px;padding:11px;margin-bottom:8px;background:#fff;}
+.rel-card .rv{font-size:16px;font-weight:800;color:#00A862;margin-bottom:3px;}
+.rel-card .rh{font-size:12px;color:#666;margin-bottom:2px;}
+.rel-card .rt{font-size:13px;color:#444;line-height:1.5;}
+.rel-card .rl{display:flex;gap:6px;margin-top:7px;}
+.rbtn{font-size:11px;padding:4px 10px;border-radius:20px;border:1.5px solid #E0E0E0;background:#fff;color:#666;cursor:pointer;font-family:inherit;-webkit-appearance:none;}
+.rbtn.on{background:#E6F5EE;color:#005C35;border-color:#B2DFCC;}
+
+.sh-div{height:1px;background:#E0E0E0;margin:14px 0;}
+.fg{margin-bottom:11px;}
+.fg label{display:block;font-size:12px;font-weight:500;color:#666;margin-bottom:4px;}
+.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid #E0E0E0;border-radius:10px;padding:10px 13px;font-size:14px;font-family:inherit;color:#111;background:#fff;outline:none;-webkit-appearance:none;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#00A862;}
+.fg input::placeholder,.fg textarea::placeholder{color:#AAA;}
+.fg textarea{min-height:68px;resize:none;}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sh-acts{display:flex;gap:8px;margin-top:2px;padding-bottom:6px;}
+.empty-s{text-align:center;padding:22px;color:#666;font-size:13px;line-height:1.6;}
+.disc{font-size:11px;color:#AAA;padding:10px 18px 18px;border-top:1px solid #E0E0E0;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">Anest<b>Lab</b></div>
+  <div class="live"><div class="ldot"></div>tempo real</div>
+</header>
+
+<section class="hero">
+  <span class="hero-eye">Inteligência coletiva de mercado</span>
+  <h1>Quanto paga cada<br>hospital em <i>São Paulo?</i></h1>
+  <p>Salários reais de plantão, coletados anonimamente pelos próprios anestesistas. Contribua com o seu dado e desbloqueie o mapa.</p>
+  <div class="hero-stats">
+    <div><div class="hs-n" id="nH">52</div><div class="hs-l">hospitais</div></div>
+    <div><div class="hs-n" id="nR">0</div><div class="hs-l">relatos</div></div>
+    <div><div class="hs-n" id="nC">0</div><div class="hs-l">contribuições</div></div>
+  </div>
+</section>
+
+<div class="notice">
+  <p>Hospitais sem dado — <strong>seja o primeiro a contribuir</strong> e desbloqueie tudo</p>
+  <div class="notice-n" id="nBloq">52</div>
+</div>
+
+<div class="controls">
+  <input class="srch" type="text" id="srch" placeholder="Buscar hospital, bairro ou grupo...">
+  <div class="filters" id="frow"></div>
+</div>
+
+<div class="map-wrap">
+  <svg id="msvg" viewBox="0 0 360 370" xmlns="http://www.w3.org/2000/svg"></svg>
+  <div class="map-tip">Toque em um pin para ver detalhes</div>
+</div>
+<div class="legend" id="legend"></div>
+
+<div class="bbar">
+  <button class="bpri" onclick="openAdd()">+ Adicionar meu dado</button>
+  <button class="bsec" onclick="openRelatos()">Relatos</button>
+</div>
+
+<div class="ov" id="ov" onclick="closeSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sh-handle"></div>
+    <div class="sh-body">
+      <div class="sh-tag" id="sTag"></div>
+      <div class="sh-name" id="sName"></div>
+      <div class="sh-meta" id="sMeta"></div>
+      <div id="sSal"></div>
+      <div id="sGrp"></div>
+      <div id="sRels"></div>
+      <div class="sh-div" id="sDiv" style="display:none"></div>
+      <div id="sForm"></div>
+      <div class="sh-acts" id="sActs"></div>
+    </div>
+    <p class="disc">Valores baseados em relatos voluntários e anônimos. Não constituem tabela de preços. Fins exclusivamente educacionais e de transparência de mercado.</p>
+  </div>
+</div>
+
+<script>
+var REG={
+  centro:{l:'Centro / Paulista',c:'#2196F3',p:'background:#E3F2FD;color:#1565C0'},
+  oeste:{l:'Zona Oeste',c:'#00A862',p:'background:#E8F5E9;color:#2E7D32'},
+  sul:{l:'Zona Sul',c:'#FF6F00',p:'background:#FFF3E0;color:#BF360C'},
+  norte:{l:'Zona Norte',c:'#7B1FA2',p:'background:#F3E5F5;color:#4A148C'},
+  leste:{l:'Zona Leste',c:'#C62828',p:'background:#FFEBEE;color:#B71C1C'},
+  abc:{l:'ABC Paulista',c:'#37474F',p:'background:#ECEFF1;color:#263238'},
+  grande:{l:'Grande SP',c:'#AD1457',p:'background:#FCE4EC;color:#880E4F'}
+};
+
+var unlocked=false,contribs=0,selH=null,filt='all';
+var relatos=[];
+
+var H=[
+  {n:"Hospital Albert Einstein",r:"oeste",b:"Morumbi",v:0,rc:0,g:"",x:82,y:228},
+  {n:"Hospital Sírio-Libanês",r:"centro",b:"Bela Vista",v:0,rc:0,g:"",x:188,y:163},
+  {n:"Hospital das Clínicas (HC-FMUSP)",r:"oeste",b:"Cerqueira César",v:0,rc:0,g:"",x:150,y:156},
+  {n:"Hospital do Coração (HCor)",r:"centro",b:"Paraíso",v:0,rc:0,g:"",x:196,y:176},
+  {n:"Hospital Alemão Oswaldo Cruz",r:"centro",b:"Paraíso",v:0,rc:0,g:"",x:204,y:168},
+  {n:"Hospital Beneficência Portuguesa",r:"centro",b:"Bom Retiro",v:0,rc:0,g:"",x:214,y:146},
+  {n:"Hospital Samaritano Higienópolis",r:"centro",b:"Higienópolis",v:0,rc:0,g:"",x:174,y:150},
+  {n:"Hospital Sabará",r:"centro",b:"Higienópolis",v:0,rc:0,g:"",x:170,y:142},
+  {n:"Santa Casa de São Paulo",r:"centro",b:"Santa Cecília",v:0,rc:0,g:"",x:208,y:152},
+  {n:"Hospital 9 de Julho",r:"centro",b:"Cerqueira César",v:0,rc:0,g:"",x:182,y:158},
+  {n:"Hospital Santa Catarina",r:"centro",b:"Paulista",v:0,rc:0,g:"",x:191,y:166},
+  {n:"Hospital Pro Matre Paulista",r:"centro",b:"Bela Vista",v:0,rc:0,g:"",x:195,y:170},
+  {n:"Hospital Santa Joana",r:"centro",b:"Paraíso",v:0,rc:0,g:"",x:199,y:178},
+  {n:"Hospital Santa Isabel",r:"centro",b:"Higienópolis",v:0,rc:0,g:"",x:177,y:146},
+  {n:"A.C. Camargo Cancer Center",r:"centro",b:"Liberdade",v:0,rc:0,g:"",x:211,y:174},
+  {n:"Hospital São Camilo – Pompéia",r:"oeste",b:"Pompéia",v:0,rc:0,g:"IPAR",x:142,y:148},
+  {n:"Instituto do Coração (InCor)",r:"oeste",b:"Cerqueira César",v:0,rc:0,g:"",x:152,y:158},
+  {n:"Hospital Leforte Morumbi",r:"oeste",b:"Morumbi",v:0,rc:0,g:"",x:86,y:234},
+  {n:"Hospital São Luiz Itaim",r:"oeste",b:"Itaim Bibi",v:0,rc:0,g:"",x:126,y:194},
+  {n:"Hospital Metropolitano",r:"oeste",b:"Lapa",v:0,rc:0,g:"",x:134,y:146},
+  {n:"Hospital Jardins",r:"oeste",b:"Pinheiros",v:0,rc:0,g:"",x:146,y:172},
+  {n:"Hospital São Camilo – Santana",r:"norte",b:"Santana",v:0,rc:0,g:"",x:200,y:94},
+  {n:"Conjunto Hospitalar do Mandaqui",r:"norte",b:"Mandaqui",v:0,rc:0,g:"",x:208,y:86},
+  {n:"Hospital São Luiz Gonzaga",r:"norte",b:"Jaçanã",v:0,rc:0,g:"",x:246,y:80},
+  {n:"Hospital Presidente",r:"norte",b:"Água Fria",v:0,rc:0,g:"",x:222,y:82},
+  {n:"Hospital São Camilo – Ipiranga",r:"sul",b:"Ipiranga",v:0,rc:0,g:"",x:242,y:216},
+  {n:"Hospital Alvorada Moema",r:"sul",b:"Moema",v:0,rc:0,g:"",x:178,y:212},
+  {n:"Hospital Santa Paula",r:"sul",b:"Brooklin",v:0,rc:0,g:"",x:150,y:232},
+  {n:"Hospital Santa Cruz",r:"sul",b:"Vila Mariana",v:0,rc:0,g:"",x:198,y:202},
+  {n:"Hospital Paulista",r:"sul",b:"Vila Clementino",v:0,rc:0,g:"",x:202,y:210},
+  {n:"Hospital São Paulo (UNIFESP)",r:"sul",b:"Vila Clementino",v:0,rc:0,g:"",x:205,y:214},
+  {n:"Hospital Dante Pazzanese",r:"sul",b:"Ibirapuera",v:0,rc:0,g:"",x:186,y:206},
+  {n:"Hospital Ipiranga",r:"sul",b:"Ipiranga",v:0,rc:0,g:"",x:240,y:220},
+  {n:"Complexo Heliópolis",r:"sul",b:"Heliópolis",v:0,rc:0,g:"",x:250,y:230},
+  {n:"Hospital Ruben Berta",r:"sul",b:"Indianópolis",v:0,rc:0,g:"",x:192,y:220},
+  {n:"Hospital M'Boi Mirim",r:"sul",b:"M'Boi Mirim",v:0,rc:0,g:"",x:122,y:290},
+  {n:"Hospital São Luiz Anália Franco",r:"leste",b:"Anália Franco",v:0,rc:0,g:"",x:286,y:164},
+  {n:"Hospital Santa Marcelina",r:"leste",b:"Itaquera",v:0,rc:0,g:"",x:312,y:178},
+  {n:"Hospital Santo Expedito",r:"leste",b:"Itaquera",v:0,rc:0,g:"",x:316,y:186},
+  {n:"Hospital Santa Virgínia",r:"leste",b:"Belém",v:0,rc:0,g:"",x:260,y:166},
+  {n:"Hospital Cármino Caricchio",r:"leste",b:"Tatuapé",v:0,rc:0,g:"",x:272,y:158},
+  {n:"Hospital Geral de Guarulhos",r:"grande",b:"Guarulhos",v:0,rc:0,g:"",x:292,y:88},
+  {n:"Hospital Alvorada Guarulhos",r:"grande",b:"Guarulhos",v:0,rc:0,g:"",x:302,y:80},
+  {n:"Hospital Christovão da Gama",r:"abc",b:"Santo André",v:0,rc:0,g:"",x:286,y:268},
+  {n:"Hospital Brasil Santo André",r:"abc",b:"Santo André",v:0,rc:0,g:"",x:278,y:276},
+  {n:"CHM Santo André",r:"abc",b:"Santo André",v:0,rc:0,g:"",x:282,y:284},
+  {n:"Hospital Santa Helena SBC",r:"abc",b:"São Bernardo",v:0,rc:0,g:"",x:214,y:288},
+  {n:"Hospital Albert Sabin São Caetano",r:"abc",b:"São Caetano do Sul",v:0,rc:0,g:"",x:266,y:256},
+  {n:"Hospital Estadual Diadema",r:"abc",b:"Diadema",v:0,rc:0,g:"",x:222,y:276},
+];
+
+var SP="M40,58 L60,40 L92,34 L130,28 L170,24 L210,22 L250,20 L290,22 L320,28 L340,36 L350,50 L354,66 L352,88 L346,110 L340,132 L336,156 L332,180 L328,204 L322,228 L314,250 L302,268 L284,284 L262,296 L238,304 L212,308 L186,306 L160,300 L136,290 L112,276 L90,260 L70,240 L52,218 L40,194 L32,168 L28,142 L26,116 L28,90 Z";
+
+function drawMap(){
+  var svg=document.getElementById('msvg');
+  var q=(document.getElementById('srch').value||'').toLowerCase();
+  var out='<rect width="360" height="370" fill="#EEF2F5"/>';
+  out+='<path d="'+SP+'" fill="#DDE5ED" stroke="#BBCAD4" stroke-width="1.5"/>';
+  out+='<text x="180" y="195" text-anchor="middle" font-size="10" fill="#B0BEC5" font-family="sans-serif">São Paulo</text>';
+
+  H.filter(function(h){
+    var mf=filt==='all'||h.r===filt;
+    var mq=!q||h.n.toLowerCase().indexOf(q)>-1||h.b.toLowerCase().indexOf(q)>-1||(h.g&&h.g.toLowerCase().indexOf(q)>-1);
+    return mf&&mq;
+  }).forEach(function(h){
+    var reg=REG[h.r]||{c:'#999'};
+    var hasV=unlocked&&h.v>0;
+    var col=hasV?reg.c:'#B0BEC5';
+    var sz=hasV?9:7;
+    var gEl='<g style="cursor:pointer" onclick="openHosp(\''+escId(h.n)+'\')">';
+    gEl+='<circle cx="'+h.x+'" cy="'+h.y+'" r="'+(sz+6)+'" fill="'+col+'" opacity="0.15"/>';
+    gEl+='<circle cx="'+h.x+'" cy="'+h.y+'" r="'+sz+'" fill="'+col+'" stroke="#fff" stroke-width="2"/>';
+    if(hasV){
+      var lbl='R$'+(h.v/1000).toFixed(1)+'k';
+      var tw=lbl.length*5.2+8;
+      gEl+='<rect x="'+(h.x-tw/2)+'" y="'+(h.y-sz-16)+'" width="'+tw+'" height="13" rx="4" fill="'+col+'"/>';
+      gEl+='<text x="'+h.x+'" y="'+(h.y-sz-5)+'" text-anchor="middle" font-size="7.5" fill="#fff" font-family="sans-serif" font-weight="600">'+lbl+'</text>';
+    }
+    gEl+='</g>';
+    out+=gEl;
+  });
+  svg.innerHTML=out;
+}
+
+function escId(s){return s.replace(/'/g,"\\'");}
+
+function openHosp(name){
+  var h=H.find(function(x){return x.n===name;});
+  if(!h)return;
+  selH=h;
+  var reg=REG[h.r]||{l:h.r,p:'',c:'#999'};
+  document.getElementById('sTag').textContent=reg.l;
+  document.getElementById('sName').textContent=h.n;
+  document.getElementById('sMeta').innerHTML='<span class="rpill" style="'+reg.p+'">'+reg.l+'</span>'+h.b;
+  var hasV=unlocked&&h.v>0;
+  document.getElementById('sSal').innerHTML=
+    '<div class="sal-box">'+
+    '<div class="sal-lbl">Plantão 12h · valor líquido na conta</div>'+
+    '<div class="sal-val'+(hasV?'':' lk')+'">'+(hasV?'R$ '+h.v.toLocaleString('pt-BR'):'R$ ????')+'</div>'+
+    '<div class="sal-sub">'+(h.rc?h.rc+' relato'+(h.rc>1?'s':''):'nenhum relato ainda')+'</div>'+
+    (!unlocked?'<div class="sal-cta">Contribua para desbloquear os valores</div>':'')+
+    '</div>';
+  document.getElementById('sGrp').innerHTML=
+    '<div class="grp-box"><div class="grp-lbl">Grupo de anestesia</div>'+
+    (h.g?'<div class="grp-val">'+h.g+'</div>':'<div class="grp-empty">não informado ainda</div>')+
+    '</div>';
+  var rns=relatos.filter(function(r){return r.hosp===h.n;});
+  document.getElementById('sRels').innerHTML=rns.length?
+    '<div class="rel-hdr">'+rns.length+' relato'+(rns.length>1?'s':'')+' da comunidade</div>'+
+    rns.slice(0,3).map(function(r){
+      return '<div class="rel-card"><div class="rv">R$ '+r.v.toLocaleString('pt-BR')+'</div><div class="rt">'+r.t+'</div>'+
+      '<div class="rl"><button class="rbtn'+(r.lk?' on':'')+'" onclick="tLike('+r.id+',this)">confirmo ('+r.lk_n+')</button>'+
+      '<button class="rbtn'+(r.fi?' on':'')+'" onclick="tFire('+r.id+',this)">esse é real ('+r.fi_n+')</button></div></div>';
+    }).join(''):'';
+  document.getElementById('sDiv').style.display='block';
+  if(!unlocked){
+    document.getElementById('sForm').innerHTML=
+      '<div class="f2">'+
+      '<div class="fg"><label>Valor do plantão 12h (R$)</label><input type="number" id="fv" placeholder="Ex: 1500"></div>'+
+      '<div class="fg"><label>Grupo de anestesia</label><input type="text" id="fg" placeholder="Ex: GAAP, IPAR..."></div>'+
+      '</div>'+
+      '<div class="fg"><label>Como você obteve esse dado?</label>'+
+      '<select id="ff"><option value="own">Experiência própria — trabalhei nesse hospital</option>'+
+      '<option value="peer">Relato de colega — ouvi diretamente</option>'+
+      '<option value="est">Estimativa — aproximado, ouvi falar</option></select></div>';
+    document.getElementById('sActs').innerHTML='<button class="bpri" style="flex:1" onclick="submitH()">Contribuir e desbloquear mapa</button>';
+  } else {
+    document.getElementById('sForm').innerHTML=
+      '<div class="f2">'+
+      '<div class="fg"><label>Atualizar valor (R$)</label><input type="number" id="fv" placeholder="Novo valor"></div>'+
+      '<div class="fg"><label>Grupo de anestesia</label><input type="text" id="fg" value="'+(h.g||'')+'" placeholder="Nome do grupo"></div>'+
+      '</div>';
+    document.getElementById('sActs').innerHTML='<button class="bpri" style="flex:1" onclick="submitH()">Atualizar</button><button class="bsec" onclick="closeSheet()">Fechar</button>';
+  }
+  document.getElementById('ov').classList.add('on');
+}
+
+function submitH(){
+  var val=parseInt((document.getElementById('fv')||{}).value||'0');
+  var grp=((document.getElementById('fg')||{}).value||'').trim();
+  if(!val||val<=0){alert('Informe o valor do plantão.');return;}
+  if(selH){selH.v=val;if(grp)selH.g=grp;selH.rc=Math.max(selH.rc,1);}
+  unlocked=true;contribs++;
+  drawMap();stats();closeSheet();
+}
+
+function openAdd(){
+  selH=null;
+  document.getElementById('sTag').textContent='Novo hospital';
+  document.getElementById('sName').textContent='Hospital não listado?';
+  document.getElementById('sMeta').innerHTML='Adicione e contribua com o dado.';
+  document.getElementById('sSal').innerHTML='';
+  document.getElementById('sGrp').innerHTML='';
+  document.getElementById('sRels').innerHTML='';
+  document.getElementById('sDiv').style.display='none';
+  document.getElementById('sForm').innerHTML=
+    '<div class="fg"><label>Nome do hospital</label><input type="text" id="fn" placeholder="Ex: Hospital São Lucas – Zona Norte"></div>'+
+    '<div class="f2">'+
+    '<div class="fg"><label>Valor do plantão 12h (R$)</label><input type="number" id="fv" placeholder="O que entrou na conta"></div>'+
+    '<div class="fg"><label>Grupo de anestesia</label><input type="text" id="fg" placeholder="Ex: GAAP, IPAR, SMA..."></div>'+
+    '</div>'+
+    '<div class="fg"><label>Como você obteve esse dado?</label>'+
+    '<select id="ff"><option value="own">Experiência própria — trabalhei nesse hospital</option>'+
+    '<option value="peer">Relato de colega — ouvi diretamente</option>'+
+    '<option value="est">Estimativa — aproximado, ouvi falar</option></select></div>';
+  document.getElementById('sActs').innerHTML='<button class="bpri" style="flex:1" onclick="submitNew()">Adicionar e desbloquear mapa</button>';
+  document.getElementById('ov').classList.add('on');
+}
+
+function submitNew(){
+  var nome=((document.getElementById('fn')||{}).value||'').trim();
+  var val=parseInt((document.getElementById('fv')||{}).value||'0');
+  var grp=((document.getElementById('fg')||{}).value||'').trim();
+  if(!nome||!val||val<=0){alert('Preencha nome e valor.');return;}
+  var ex=H.find(function(h){return h.n.toLowerCase()===nome.toLowerCase();});
+  if(ex){ex.v=val;if(grp)ex.g=grp;ex.rc++;}
+  else{var s=Math.random();H.unshift({n:nome,r:'centro',b:'SP',v:val,rc:1,g:grp,x:150+s*60,y:150+s*50});}
+  unlocked=true;contribs++;
+  drawMap();stats();closeSheet();
+}
+
+function openRelatos(){
+  document.getElementById('sTag').textContent='Comunidade';
+  document.getElementById('sName').textContent='Relatos anônimos';
+  document.getElementById('sMeta').innerHTML='Sem identificação. Sem julgamento.';
+  document.getElementById('sSal').innerHTML='';
+  document.getElementById('sGrp').innerHTML='';
+  var feed=relatos.length?relatos.map(function(r){
+    return '<div class="rel-card"><div class="rh">'+r.hosp+'</div><div class="rv">R$ '+r.v.toLocaleString('pt-BR')+'</div><div class="rt">'+r.t+'</div>'+
+    '<div class="rl"><button class="rbtn'+(r.lk?' on':'')+'" onclick="tLike('+r.id+',this)">confirmo ('+r.lk_n+')</button>'+
+    '<button class="rbtn'+(r.fi?' on':'')+'" onclick="tFire('+r.id+',this)">esse é real ('+r.fi_n+')</button></div></div>';
+  }).join(''):'<div class="empty-s">Nenhum relato ainda.<br>O primeiro abre a conversa.</div>';
+  document.getElementById('sRels').innerHTML=feed;
+  document.getElementById('sDiv').style.display='block';
+  var opts=H.map(function(h){return '<option>'+h.n+'</option>';}).join('');
+  document.getElementById('sForm').innerHTML=
+    '<div class="fg"><label>Hospital</label><select id="fh"><option value="">Selecione...</option>'+opts+'</select></div>'+
+    '<div class="fg"><label>Valor recebido no plantão 12h (R$)</label><input type="number" id="fv" placeholder="O que entrou na sua conta"></div>'+
+    '<div class="fg"><label>Seu relato</label><textarea id="ft" placeholder="O que você gostaria que alguém tivesse te contado antes..."></textarea></div>';
+  document.getElementById('sActs').innerHTML='<button class="bpri" style="flex:1" onclick="submitRel()">Publicar relato</button><button class="bsec" onclick="closeSheet()">Fechar</button>';
+  document.getElementById('ov').classList.add('on');
+}
+
+function submitRel(){
+  var hosp=((document.getElementById('fh')||{}).value||'').trim();
+  var val=parseInt((document.getElementById('fv')||{}).value||'0');
+  var txt=((document.getElementById('ft')||{}).value||'').trim();
+  if(!hosp||!val||!txt){alert('Preencha todos os campos.');return;}
+  relatos.unshift({id:Date.now(),hosp:hosp,v:val,t:txt,lk:false,lk_n:0,fi:false,fi_n:0});
+  var h=H.find(function(x){return x.n===hosp;});
+  if(h){if(!h.v)h.v=val;h.rc++;if(h.rc>=3)h.hot=true;}
+  unlocked=true;contribs++;
+  drawMap();stats();closeSheet();
+}
+
+function tLike(id,btn){
+  var r=relatos.find(function(x){return x.id===id;});if(!r)return;
+  r.lk=!r.lk;r.lk_n+=r.lk?1:-1;
+  btn.classList.toggle('on',r.lk);btn.textContent='confirmo ('+r.lk_n+')';
+}
+function tFire(id,btn){
+  var r=relatos.find(function(x){return x.id===id;});if(!r)return;
+  r.fi=!r.fi;r.fi_n+=r.fi?1:-1;
+  btn.classList.toggle('on',r.fi);btn.textContent='esse é real ('+r.fi_n+')';
+}
+function closeSheet(e){
+  if(!e||e.target===document.getElementById('ov'))
+    document.getElementById('ov').classList.remove('on');
+}
+function setF(f,btn){
+  filt=f;
+  document.querySelectorAll('.ftag').forEach(function(t){t.classList.remove('on');});
+  btn.classList.add('on');
+  drawMap();
+}
+function buildFilters(){
+  var html='<button class="ftag on" onclick="setF(\'all\',this)">Todos</button>';
+  Object.keys(REG).forEach(function(k){
+    html+='<button class="ftag" onclick="setF(\''+k+'\',this)">'+REG[k].l+'</button>';
+  });
+  document.getElementById('frow').innerHTML=html;
+}
+function buildLegend(){
+  var html='';
+  Object.keys(REG).forEach(function(k){
+    html+='<div class="leg-i"><div class="leg-d" style="background:'+REG[k].c+'"></div>'+REG[k].l+'</div>';
+  });
+  document.getElementById('legend').innerHTML=html;
+}
+function stats(){
+  document.getElementById('nH').textContent=H.length;
+  document.getElementById('nR').textContent=relatos.length;
+  document.getElementById('nC').textContent=contribs;
+  document.getElementById('nBloq').textContent=H.filter(function(h){return h.v===0;}).length;
+}
+document.getElementById('srch').addEventListener('input',drawMap);
+buildFilters();
+buildLegend();
+drawMap();
+stats();
+</script>
+</body>
+</html>
